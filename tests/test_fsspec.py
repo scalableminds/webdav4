@@ -31,7 +31,7 @@ def test_fs_ls(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
             "content_type": None,
             "etag": None,
             "type": "directory",
-            "name": "data",
+            "name": "/data",
             "display_name": "data",
             "href": join_url(server_address, "data").path + "/",
         }
@@ -48,8 +48,8 @@ def test_fs_ls(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
         i.pop("etag", None)
         d[i["name"]] = i
 
-    assert d["data/bar"] == {
-        "name": "data/bar",
+    assert d["/data/bar"] == {
+        "name": "/data/bar",
         "href": join_url(server_address, "data/bar").path,
         "size": 3,
         "created": approx_datetime(
@@ -63,8 +63,8 @@ def test_fs_ls(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
         "type": "file",
         "display_name": "bar",
     }
-    assert d["data/foo"] == {
-        "name": "data/foo",
+    assert d["/data/foo"] == {
+        "name": "/data/foo",
         "href": join_url(server_address, "data/foo").path,
         "size": 3,
         "created": approx_datetime(
@@ -80,7 +80,7 @@ def test_fs_ls(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
     }
 
     fs.rm("/data/foo")
-    assert fs.ls("/data/", detail=False) == ["data/bar"]
+    assert fs.ls("/data/", detail=False) == ["/data/bar"]
     assert fs.size("/data/bar") == 3
     assert fs.modified("/data/bar") == approx_datetime(
         datetime.fromtimestamp(int(stat.st_mtime), tz=timezone.utc)
@@ -91,7 +91,7 @@ def test_fs_ls(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
     assert checksum and isinstance(checksum, str)
 
     fs.mv("data/bar", "data/foobar")
-    assert fs.ls("data", detail=False) == ["data/foobar"]
+    assert fs.ls("data", detail=False) == ["/data/foobar"]
 
     foobar_stat = (storage_dir / "data" / "foobar").stat()
     assert fs.created("data/foobar") == approx_datetime(
@@ -99,7 +99,7 @@ def test_fs_ls(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
     )
 
     fs.cp("data/foobar", "data/bar")
-    assert set(fs.ls("data", detail=False)) == {"data/foobar", "data/bar"}
+    assert set(fs.ls("data", detail=False)) == {"/data/foobar", "/data/bar"}
 
     fs.makedirs("data/subdir/subsubdir", exist_ok=True)
     assert fs.isdir("data/subdir/subsubdir")
@@ -409,29 +409,32 @@ def test_ls(storage_dir: TmpDir, fs: WebdavFileSystem, detail: bool):
         }
 
     # try ls root
-    assert get_files(fs.ls("", detail=detail)) == {"empty_dir", "foo"}
+    assert get_files(fs.ls("", detail=detail)) == {"/empty_dir", "/foo"}
 
     # try ls dir with files
     storage_dir.gen({"data": {"foo": "foo", "bar": "bar"}})
-    assert get_files(fs.ls("data", detail=detail)) == {"data/foo", "data/bar"}
+    assert get_files(fs.ls("data", detail=detail)) == {
+        "/data/foo",
+        "/data/bar",
+    }
 
     # try ls with files and subdirs
     storage_dir.gen(
         {"data2": {"foo": "foo", "bar": "bar", "baz": {"foobaz": "foobaz"}}}
     )
     assert get_files(fs.ls("data2", detail=detail)) == {
-        "data2/foo",
-        "data2/bar",
-        "data2/baz",
+        "/data2/foo",
+        "/data2/bar",
+        "/data2/baz",
     }
 
     # ls with files having same name as parent
     storage_dir.gen({"lorem": {"lorem": "lorem"}})
-    assert get_files(fs.ls("lorem", detail=detail)) == {"lorem/lorem"}
+    assert get_files(fs.ls("lorem", detail=detail)) == {"/lorem/lorem"}
 
     # ls with subdirs having same name as parent
     storage_dir.gen({"ipsum": {"ipsum": {"ipsum": "ipsum"}}})
-    assert get_files(fs.ls("ipsum", detail=detail)) == {"ipsum/ipsum"}
+    assert get_files(fs.ls("ipsum", detail=detail)) == {"/ipsum/ipsum"}
 
 
 def test_find(storage_dir: TmpDir, fs: WebdavFileSystem):
@@ -446,30 +449,31 @@ def test_find(storage_dir: TmpDir, fs: WebdavFileSystem):
             }
         }
     )
-    assert set(fs.find("")) == {"data/foo", "data/bar", "data/baz/foobaz"}
+    assert set(fs.find("")) == {"/data/foo", "/data/bar", "/data/baz/foobaz"}
     assert set(fs.find("", withdirs=True)) == {
-        "data",
-        "data/foo",
-        "data/bar",
-        "data/empty",
-        "data/baz",
-        "data/baz/foobaz",
+        "/data",
+        "/data/foo",
+        "/data/bar",
+        "/data/empty",
+        "/data/baz",
+        "/data/baz/foobaz",
     }
 
     assert set(fs.find("", maxdepth=1)) == set()
-    assert set(fs.find("", maxdepth=1, withdirs=True)) == {"data"}
+    assert set(fs.find("", maxdepth=1, withdirs=True)) == {"/data"}
 
-    assert set(fs.find("", maxdepth=2)) == {"data/foo", "data/bar"}
+    assert set(fs.find("", maxdepth=2)) == {"/data/foo", "/data/bar"}
     assert set(fs.find("", maxdepth=2, withdirs=True)) == {
-        "data/foo",
-        "data/bar",
-        "data",
-        "data/baz",
-        "data/empty",
+        "/data/foo",
+        "/data/bar",
+        "/data",
+        "/data/baz",
+        "/data/empty",
     }
 
     assert set(fs.find("not-existing")) == set()
     assert set(fs.find("data/foo")) == {"data/foo"}
+    assert set(fs.find("/data/foo")) == {"/data/foo"}
 
 
 def test_info(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
@@ -493,7 +497,7 @@ def test_info(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
         "content_language": None,
         "content_type": None,
         "type": "directory",
-        "name": "data",
+        "name": "/data",
         "display_name": "data",
         "href": join_url(server_address, "data").path + "/",
     }
@@ -504,7 +508,7 @@ def test_info(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
     d = fs.info("data/foo")
     assert d.pop("etag")
     assert d == {
-        "name": "data/foo",
+        "name": "/data/foo",
         "href": join_url(server_address, "data/foo").path,
         "size": 3,
         "created": approx_datetime(
@@ -522,7 +526,7 @@ def test_info(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
     d = fs.info("data/bar")
     assert d.pop("etag")
     assert d == {
-        "name": "data/bar",
+        "name": "/data/bar",
         "href": join_url(server_address, "data/bar").path,
         "size": 3,
         "created": approx_datetime(
@@ -550,7 +554,7 @@ def test_info(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
         "content_language": None,
         "content_type": None,
         "type": "directory",
-        "name": "data/empty",
+        "name": "/data/empty",
         "display_name": "empty",
         "href": join_url(server_address, "data/empty").path + "/",
     }
@@ -566,10 +570,13 @@ def test_walk(storage_dir: TmpDir, fs: WebdavFileSystem):
     assert list(fs.walk("data")) == [
         ("data", [], ["foo"]),
     ]
+    assert list(fs.walk("/data")) == [
+        ("/data", [], ["foo"]),
+    ]
 
     assert list(fs.walk("")) == [
         ("", ["data"], []),
-        ("data", [], ["foo"]),
+        ("/data", [], ["foo"]),
     ]
 
 
