@@ -55,7 +55,7 @@ def _prepare_result_info(
     response: Response, base_url: URL, detail: bool = True
 ) -> Union[str, Dict[str, Any]]:
     """Transform response to a dictionary/str for info/ls."""
-    rel = response.path_relative_to(base_url)
+    rel = "/" + response.path_relative_to(base_url)
     if not detail:
         return rel
     return {
