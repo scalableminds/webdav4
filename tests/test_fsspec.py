@@ -449,30 +449,31 @@ def test_find(storage_dir: TmpDir, fs: WebdavFileSystem):
             }
         }
     )
-    assert set(fs.find("")) == {"data/foo", "data/bar", "data/baz/foobaz"}
+    assert set(fs.find("")) == {"/data/foo", "/data/bar", "/data/baz/foobaz"}
     assert set(fs.find("", withdirs=True)) == {
-        "data",
-        "data/foo",
-        "data/bar",
-        "data/empty",
-        "data/baz",
-        "data/baz/foobaz",
+        "/data",
+        "/data/foo",
+        "/data/bar",
+        "/data/empty",
+        "/data/baz",
+        "/data/baz/foobaz",
     }
 
     assert set(fs.find("", maxdepth=1)) == set()
-    assert set(fs.find("", maxdepth=1, withdirs=True)) == {"data"}
+    assert set(fs.find("", maxdepth=1, withdirs=True)) == {"/data"}
 
-    assert set(fs.find("", maxdepth=2)) == {"data/foo", "data/bar"}
+    assert set(fs.find("", maxdepth=2)) == {"/data/foo", "/data/bar"}
     assert set(fs.find("", maxdepth=2, withdirs=True)) == {
-        "data/foo",
-        "data/bar",
-        "data",
-        "data/baz",
-        "data/empty",
+        "/data/foo",
+        "/data/bar",
+        "/data",
+        "/data/baz",
+        "/data/empty",
     }
 
     assert set(fs.find("not-existing")) == set()
     assert set(fs.find("data/foo")) == {"data/foo"}
+    assert set(fs.find("/data/foo")) == {"/data/foo"}
 
 
 def test_info(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
@@ -496,7 +497,7 @@ def test_info(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
         "content_language": None,
         "content_type": None,
         "type": "directory",
-        "name": "data",
+        "name": "/data",
         "display_name": "data",
         "href": join_url(server_address, "data").path + "/",
     }
@@ -507,7 +508,7 @@ def test_info(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
     d = fs.info("data/foo")
     assert d.pop("etag")
     assert d == {
-        "name": "data/foo",
+        "name": "/data/foo",
         "href": join_url(server_address, "data/foo").path,
         "size": 3,
         "created": approx_datetime(
@@ -525,7 +526,7 @@ def test_info(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
     d = fs.info("data/bar")
     assert d.pop("etag")
     assert d == {
-        "name": "data/bar",
+        "name": "/data/bar",
         "href": join_url(server_address, "data/bar").path,
         "size": 3,
         "created": approx_datetime(
@@ -553,7 +554,7 @@ def test_info(storage_dir: TmpDir, fs: WebdavFileSystem, server_address: URL):
         "content_language": None,
         "content_type": None,
         "type": "directory",
-        "name": "data/empty",
+        "name": "/data/empty",
         "display_name": "empty",
         "href": join_url(server_address, "data/empty").path + "/",
     }
@@ -569,10 +570,13 @@ def test_walk(storage_dir: TmpDir, fs: WebdavFileSystem):
     assert list(fs.walk("data")) == [
         ("data", [], ["foo"]),
     ]
+    assert list(fs.walk("/data")) == [
+        ("/data", [], ["foo"]),
+    ]
 
     assert list(fs.walk("")) == [
         ("", ["data"], []),
-        ("data", [], ["foo"]),
+        ("/data", [], ["foo"]),
     ]
 
 
